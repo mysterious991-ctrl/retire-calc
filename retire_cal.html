@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勞工退休領金大算盤 11.7 - 專業理財工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
+        .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .glass-card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
+        .input-group { background: #f8fafc; padding: 0.8rem; border-radius: 1rem; border: 1px solid #e2e8f0; }
+        .label-style { font-size: 11px; font-weight: 900; color: #64748b; margin-bottom: 4px; display: block; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #4f46e5; }
+        input:checked + .slider:before { transform: translateX(18px); }
+        .mode-btn { flex: 1; padding: 10px; font-weight: 900; font-size: 14px; border-radius: 12px; transition: all 0.3s; }
+        .mode-active { background: #4f46e5; color: white; }
+        .mode-inactive { background: #f1f5f9; color: #64748b; }
+        #resultSection { display: none; }
+        .ad-slot { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 12px; text-align: center; color: #94a3b8; font-size: 10px; margin: 15px 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    </style>
+</head>
+<body class="pb-10 text-slate-800">
+
+    <header class="gradient-bg pt-12 pb-24 px-6 text-white text-center">
+        <h1 class="text-3xl font-black tracking-tight italic text-indigo-300">勞工退休領金大算盤</h1>
+        <p class="mt-3 opacity-80 text-sm font-bold tracking-wide">勞退和勞保退休後每月能領多少錢？</p>
+    </header>
+
+    <main class="max-w-xl mx-auto px-4 -mt-16 space-y-4">
+        
+        <div class="glass-card p-6 shadow-xl border-2 border-white">
+            <div class="section-header flex items-center gap-2 mb-4">
+                <span class="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+                <h2 class="font-black text-sm text-slate-700">第一步：職涯現況</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="input-group col-span-2">
+                    <label class="label-style">目前月薪 (投保級距)</label>
+                    <div class="flex items-center text-xl font-black">
+                        <span class="text-slate-400 mr-1">NT$</span>
+                        <input type="text" id="salaryDisplay" value="50,000" oninput="formatInput(this, 'salaryInput')" class="w-full bg-transparent outline-none">
+                        <input type="hidden" id="salaryInput" value="50000">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="label-style">目前年齡</label>
+                    <input type="number" id="currentAge" value="35" class="w-full bg-transparent text-lg font-black outline-none">
+                </div>
+                <div class="input-group">
+                    <label class="label-style text-indigo-500">預計退休年齡</label>
+                    <input type="number" id="retireAge" value="65" class="w-full bg-transparent text-lg font-black text-indigo-600 outline-none">
+                </div>
+                <div class="input-group col-span-2 bg-emerald-50/30 border-emerald-100">
+                    <label class="label-style text-emerald-600 flex justify-between items-center">
+                        勞退帳戶目前累計餘額
+                        <a href="https://edesk.bli.gov.tw/na/" target="_blank" class="text-[10px] text-blue-500 underline font-black font-bold">快速查詢 ⮕</a>
+                    </label>
+                    <div class="flex items-center text-lg font-black text-emerald-700">
+                        <span class="text-emerald-300 mr-1">NT$</span>
+                        <input type="text" id="poolDisplay" value="500,000" oninput="formatInput(this, 'currentPool')" class="w-full bg-transparent outline-none">
+                        <input type="hidden" id="currentPool" value="500000">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header flex items-center gap-2 pt-6 mb-4">
+                <span class="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+                <h2 class="font-black text-sm text-slate-700">第二步：策略設定</h2>
+            </div>
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[11px] font-black"><span>勞退自提比例 (上限6%)</span><span id="laborSelfText" class="text-indigo-600">6%</span></div>
+                    <input type="range" id="laborSelf" min="0" max="6" value="6" oninput="updateSliders()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none accent-indigo-600">
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[11px] font-black"><span>預期報酬率</span><span id="roiText" class="text-emerald-600">3.0%</span></div>
+                    <input type="range" id="roiInput" min="1" max="10" value="3" step="0.5" oninput="updateSliders()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none accent-emerald-500">
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[11px] font-black"><span>預估每年薪資漲幅</span><span id="wageText" class="text-amber-600">2.0%</span></div>
+                    <input type="range" id="wageInput" min="0" max="20" value="2" step="0.5" oninput="updateSliders()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none accent-amber-500">
+                </div>
+            </div>
+            <button onclick="runCalculation()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg mt-6 shadow-lg active:scale-95 transition-all">立即計算退休金</button>
+
+            <div class="ad-slot h-24 mt-4">贊助廣告位</div>
+        </div>
+
+        <div id="resultSection" class="glass-card p-6 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-4">
+                <h2 class="font-black text-slate-700 italic text-sm">試算報告</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-black text-slate-500">併入勞保</span>
+                    <label class="switch"><input type="checkbox" id="includeLaborIns" checked onchange="calculate()"><span class="slider"></span></label>
+                </div>
+            </div>
+            <div class="flex p-1 bg-slate-100 rounded-xl gap-1">
+                <button id="modeMonthly" onclick="setMode('monthly')" class="mode-btn mode-active rounded-lg">按月領取</button>
+                <button id="modeOnce" onclick="setMode('once')" class="mode-btn mode-inactive rounded-lg">一次領完</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-indigo-950 rounded-2xl p-4 text-white">
+                    <p id="resultLabel" class="text-[9px] font-bold opacity-60 mb-1">退休後預計月領</p>
+                    <p class="text-2xl font-black">NT$ <span id="totalDisplay">0</span></p>
+                </div>
+                <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 text-emerald-700">
+                    <p class="text-[9px] font-bold opacity-60 mb-1">所得替代率</p>
+                    <p id="replaceRate" class="text-2xl font-black">0%</p>
+                </div>
+            </div>
+
+            <div class="relative h-[400px] w-full mt-4">
+                <canvas id="retireChart"></canvas>
+            </div>
+
+            <div class="ad-slot h-24">贊助商內容 / 推薦理財工具</div>
+
+            <div class="p-4 bg-slate-50 text-[10px] leading-relaxed font-bold rounded-xl border border-slate-200">
+                <p class="text-indigo-600 mb-1">【法規提醒】</p>
+                1. 勞退提繳天花板：薪資超過 $150,000 元部分不列入提繳基數。<br>
+                2. 提領限制：勞退滿 60 歲可領；勞保 65 歲領全額，最早 60 歲減給請領。<br>
+                <p class="text-rose-500 mt-2">【免責聲明】</p>
+                本程式僅依據現行法規進行模擬，不具備法律效力。未來通膨、勞保年金改革或投資市場波動均可能影響實際結果。
+            </div>
+        </div>
+
+        <section class="max-w-xl mx-auto px-4 mt-12 mb-20 space-y-8 text-slate-700">
+            <hr class="border-slate-200">
+            
+            <article>
+                <h3 class="text-xl font-black mb-3 text-indigo-900">為什麼你應該選擇「勞退自提 6%」？</h3>
+                <p class="text-sm leading-relaxed">
+                    許多勞工朋友常問：自提 6% 划算嗎？其實自提有兩大絕對優勢。首先是「節稅效益」，自提金額不列入年度個人綜合所得稅計算，對於高薪族群來說，等於立刻省下對應級距的稅金。其次是「保證收益」，勞退金依法享有兩年期定存利率的保證收益，這是一個穩賺不賠的強制儲蓄機制，非常適合作為退休規劃的基石。
+                </p>
+            </article>
+
+            <article>
+                <h3 class="text-xl font-black mb-3 text-indigo-900">勞保年金改革浪潮下，如何確保退休生活？</h3>
+                <p class="text-sm leading-relaxed">
+                    面對勞保年金可能面臨的財務改革，單純依賴第一層社會保險已不夠。透過本計算機，你可以清晰看到第二層「勞退新制」累積的力量。由於勞退是個人專戶制度，帳戶隨人走，不會有破產問題。建議透過「薪資漲幅」與「預期報酬率」的調整，提早規劃缺口，並搭配商業理財工具來補足退休後的所得替代率。
+                </p>
+            </article>
+
+            <article>
+                <h3 class="text-xl font-black mb-3 text-indigo-900">退休金領取攻略：一次領還是月領好？</h3>
+                <p class="text-sm leading-relaxed">
+                    根據統計，多數勞工選擇「按月領取」以獲得穩定的現金流。勞保年金提供活到領到、抗通膨的保障；而勞退個人專戶則提供請領年限的彈性。選擇一次領取的勞工，通常是具備獨立投資能力，能將資金投入更高報酬的市場。透過本工具切換「按月」與「一次」模式，能幫你直觀判斷哪種方式更符合你的老後財務藍圖。
+                </p>
+            </article>
+
+            <div class="ad-slot h-32 mt-8">精選理財商品導購</div>
+        </section>
+    </main>
+
+    <script>
+        const PENSION_LEVELS = [1500, 3000, 4500, 6000, 7500, 8700, 9900, 11100, 12540, 13500, 15840, 16500, 17280, 18300, 19200, 20400, 21000, 21900, 22800, 23100, 24000, 25200, 26400, 27600, 28800, 30300, 31800, 33300, 34800, 36300, 38200, 40100, 42000, 43900, 45800, 48200, 50600, 53000, 55400, 57800, 60800, 63800, 66800, 69800, 72800, 76500, 80200, 83900, 87600, 92100, 96600, 101100, 105600, 110100, 115500, 120900, 126300, 131700, 137100, 142500, 147900, 150000];
+        let myChart = null;
+        let currentMode = 'monthly';
+        Chart.register(ChartDataLabels);
+
+        function formatInput(el, hiddenId) {
+            let val = el.value.replace(/\D/g, "");
+            document.getElementById(hiddenId).value = val;
+            el.value = val ? parseInt(val).toLocaleString() : "";
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('modeMonthly').className = mode === 'monthly' ? 'mode-btn mode-active rounded-lg' : 'mode-btn mode-inactive rounded-lg';
+            document.getElementById('modeOnce').className = mode === 'once' ? 'mode-btn mode-active rounded-lg' : 'mode-btn mode-inactive rounded-lg';
+            document.getElementById('resultLabel').innerText = mode === 'monthly' ? '退休後預計月領' : '退休當下預估一次領取';
+            calculate();
+        }
+
+        function updateSliders() {
+            document.getElementById('laborSelfText').innerText = document.getElementById('laborSelf').value + '%';
+            document.getElementById('roiText').innerText = parseFloat(document.getElementById('roiInput').value).toFixed(1) + '%';
+            document.getElementById('wageText').innerText = parseFloat(document.getElementById('wageInput').value).toFixed(1) + '%';
+            if(document.getElementById('resultSection').style.display === 'block') calculate();
+        }
+
+        function runCalculation() {
+            document.getElementById('resultSection').style.display = 'block';
+            calculate();
+            setTimeout(() => { document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+        }
+
+        function calculate() {
+            const rawSalary = parseInt(document.getElementById('salaryInput').value) || 0;
+            const initialPool = parseInt(document.getElementById('currentPool').value) || 0;
+            const currentAge = parseInt(document.getElementById('currentAge').value) || 35;
+            const retireAge = parseInt(document.getElementById('retireAge').value) || 65;
+            const selfRate = parseInt(document.getElementById('laborSelf').value) / 100;
+            const roi = parseFloat(document.getElementById('roiInput').value) / 100;
+            const wageGrowth = parseFloat(document.getElementById('wageInput').value) / 100;
+            const includeLabor = document.getElementById('includeLaborIns').checked;
+
+            const labels = [], insData = [], penData = [];
+            const workYears = Math.max(0, retireAge - currentAge);
+            const ageStep = Math.max(1, Math.floor(workYears / 5));
+
+            for (let i = 0; i <= 5; i++) {
+                let passed = i === 5 ? workYears : i * ageStep;
+                let age = currentAge + passed;
+                
+                let poolTotal = initialPool * Math.pow(1 + roi, passed);
+                for(let yr = 1; yr <= passed; yr++) {
+                    let yrSalary = Math.min(150000, rawSalary * Math.pow(1 + wageGrowth, yr));
+                    let yrLvl = PENSION_LEVELS.find(lvl => lvl >= yrSalary) || 150000;
+                    let yrSave = yrLvl * (selfRate + 0.06) * 12;
+                    poolTotal += yrSave * Math.pow(1 + roi, passed - yr);
+                }
+
+                let futureSalaryRaw = rawSalary * Math.pow(1 + wageGrowth, passed);
+                let cappedSalary = Math.min(150000, futureSalaryRaw);
+                let pensionLvl = PENSION_LEVELS.find(lvl => lvl >= cappedSalary) || 150000;
+                let insLvl = Math.min(45800, pensionLvl);
+
+                let insVal, penVal;
+                if (currentMode === 'monthly') {
+                    const adj = Math.max(0.8, Math.min(1.2, 1 + (age - 65) * 0.04));
+                    insVal = includeLabor ? insLvl * (age - 25) * 0.0155 * adj : 0;
+                    penVal = poolTotal / (20 * 12);
+                } else {
+                    insVal = includeLabor ? insLvl * Math.min(45, (age - 25)) : 0;
+                    penVal = poolTotal;
+                }
+                labels.push(`${age}歲`);
+                insData.push(Math.round(insVal));
+                penData.push(Math.round(penVal));
+            }
+
+            const lastSalary = rawSalary * Math.pow(1 + wageGrowth, workYears);
+            document.getElementById('totalDisplay').innerText = (insData[5] + penData[5]).toLocaleString();
+            document.getElementById('replaceRate').innerText = currentMode === 'monthly' ? Math.round(((insData[5] + penData[5]) / lastSalary) * 100) + '%' : '--';
+            updateChart(labels, insData, penData);
+        }
+
+        function updateChart(labels, insData, penData) {
+            const ctx = document.getElementById('retireChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ data: insData, stack: 'a' }, { data: penData, stack: 'a', borderRadius: 6 }] },
+                options: {
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 50, bottom: 20 } },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end', align: 'top',
+                            color: (ctx) => parseInt(labels[ctx.dataIndex]) < 60 ? '#94a3b8' : '#1e293b',
+                            font: { weight: '900', size: 10 },
+                            formatter: (value, ctx) => {
+                                if (ctx.datasetIndex === 0) return null;
+                                const total = ctx.chart.data.datasets[0].data[ctx.dataIndex] + value;
+                                const valStr = total >= 1000000 ? (total/1000000).toFixed(1) + 'M' : (total/1000).toFixed(1) + 'k';
+                                return parseInt(labels[ctx.dataIndex]) < 60 ? `${valStr}\n(累積中)` : `${valStr}\n(可領)`;
+                            }
+                        }
+                    },
+                    elements: {
+                        bar: {
+                            backgroundColor: (ctx) => {
+                                const age = parseInt(labels[ctx.dataIndex]);
+                                if (age < 60) return ctx.datasetIndex === 0 ? '#f1f5f9' : '#cbd5e1';
+                                return ctx.datasetIndex === 0 ? '#e2e8f0' : '#4f46e5';
+                            }
+                        }
+                    },
+                    scales: { x: { grid: { display: false }, ticks: { font: { weight: 'bold' }, padding: 10 } }, y: { display: false, stacked: true } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
